@@ -58,12 +58,13 @@ def rpm_vs_time(df):
   plt.show()
 
 def rpm_vs_throttle(df):
-  plt.plot(df["engine_rpm"], df["throttle_position"])
+  plt.scatter(df["engine_rpm"], df["throttle_position"], alpha=0.5, s=10)
   plt.xlabel("rpm")
   plt.ylabel("throttle")
   plt.title("Throttle vs RPM")
   plt.grid(True)
   plt.show()
+
 
 def get_file_ext(filepath):
   return splitext(filepath)[1].lower()
