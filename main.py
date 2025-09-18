@@ -18,8 +18,8 @@ def save_csv(df, output_file_path):
 def save_json(df, output_file_path):
   df.to_json(output_file_path)
 
-def drop_duplicates(columns=['timestamp']):
-  df.drop_duplicates(subset=columns)
+def drop_duplicates(df, columns=['timestamp']):
+  df = df.drop_duplicates(subset=columns)
   return df
 
 def remove_nan(df):
@@ -34,9 +34,9 @@ def filter_outliers(df, _dict, exclusive=False):
     max_range = _dict[col][1]
 
     if exclusive:
-      mask = (df[col] > min_range & df[col] < max_range)
+      mask = ((df[col] > min_range) & (df[col] < max_range))
     else:
-      mask = (df[col] >= min_range & df[col] <= max_range)
+      mask = ((df[col] >= min_range) & (df[col] <= max_range))
 
     df = df[mask]
 
@@ -53,13 +53,14 @@ def high_rpm(df):
 
 def rpm_vs_time(df):
   plt.plot(df["timestamp"], df["engine_rpm"])
+  plt.show()
 
 def plot_rpm_vs_throttle(df):
   plt.plot(df["engine_rpm"], df["throttle_position"])
-
+  plt.show()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('filename', required=True)
+parser.add_argument('filename')
 parser.add_argument('-s', '--save')
 parser.add_argument('-d', '--drop_duplicates')
 parser.add_argument('-n', '--remove_nan')
@@ -77,10 +78,25 @@ elif '.json' in args.filename:
   df = read_json(args.filename)
 
 if args.drop_duplicates in df.columns:
-  drop_duplicates(df, args.drop_duplicates)
+  df = drop_duplicates(df, list(args.drop_duplicates))
 
 if args.remove_nan:
-  remove_nan(df)
+  df = remove_nan(df)
 
 if args.interpolate_missing in df.columns:
-  interpolate_missing(df, args.interpolate_missing)
+  df = interpolate_missing(df, args.interpolate_missing)
+
+if args.high_rpm:
+  df = high_rpm(df)
+
+if args.rpm_vs_time:
+  rpm_vs_time(df)
+
+if args.rpm_vs_throttle:
+  rpm_vs_throttle(df)
+
+if args.save:
+  if '.csv' in args.save:
+    save_csv(df, args.save)
+  elif '.json' in args.save:
+    save_json(df, args.save)
