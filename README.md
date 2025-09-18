@@ -33,3 +33,8 @@ This project provides a command-line tool for **loading, cleaning, processing, a
    ```bash
    git clone https://github.com/yourusername/vehicle-data-tool.git
    cd vehicle-data-tool
+    ```  
+2. Install dependencies
+   ```bash
+   pip install pandas matplotlib
+   ```
