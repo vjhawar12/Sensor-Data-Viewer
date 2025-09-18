@@ -1,6 +1,6 @@
 # Vehicle Data Processing & Visualization
 
-This project provides a command-line tool for **loading, cleaning, processing, and visualizing vehicle telemetry data** (e.g., speed, RPM, throttle position). It supports both CSV and JSON input formats and offers utilities for filtering, handling missing values, and generating plots.
+This project provides a command line tool for **loading, cleaning, processing, and visualizing vehicle telemetry data** such as RPM and throttle position. It supports both CSV and JSON input formats and offers utilities for filtering, handling missing values, and generating plots.
 
 ---
 
