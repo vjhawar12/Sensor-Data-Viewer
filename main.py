@@ -1,15 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
+from os.path import exists, splitext
 
 def read_csv(file_path):
   df = pd.read_csv(file_path)
-  print(df.head())
   return df
 
 def read_json(file_path):
   df = pd.read_json(file_path)
-  print(df.head())
   return df
 
 def save_csv(df, output_file_path):
@@ -18,7 +17,7 @@ def save_csv(df, output_file_path):
 def save_json(df, output_file_path):
   df.to_json(output_file_path)
 
-def drop_duplicates(df, columns=['timestamp']):
+def drop_duplicates(df, columns):
   df = df.drop_duplicates(subset=columns)
   return df
 
@@ -26,24 +25,23 @@ def remove_nan(df):
   df = df.dropna(axis=0)
   return df
 
-def filter_outliers(df, _dict, exclusive=False):
-  cols = _dict.keys()
+def filter_outliers(df, col, min_range, max_range, inclusive):
+  if col not in df.columns:
+    raise ValueError(f"Error: Column {col} does not exist")
+  if min_range > max_range:
+    raise ValueError(f"Error: min range cannot be > max range")
 
-  for col in cols:
-    min_range = _dict[col][0]
-    max_range = _dict[col][1]
+  if inclusive == 0:
+    mask = ((df[col] > min_range) & (df[col] < max_range))
+  else:
+    mask = ((df[col] >= min_range) & (df[col] <= max_range))
 
-    if exclusive:
-      mask = ((df[col] > min_range) & (df[col] < max_range))
-    else:
-      mask = ((df[col] >= min_range) & (df[col] <= max_range))
-
-    df = df[mask]
+  df = df[mask]
 
   return df
 
 def interpolate_missing(df, cols=["vehicle_speed", "engine_rpm", "throttle_position"]):
-  df = df[cols].interpolate(method='linear', limit_direction='forward')
+  df[cols] = df[cols].interpolate(method='linear', limit_direction='forward')
   return df
 
 def high_rpm(df):
@@ -53,38 +51,79 @@ def high_rpm(df):
 
 def rpm_vs_time(df):
   plt.plot(df["timestamp"], df["engine_rpm"])
+  plt.xlabel("time")
+  plt.ylabel("rpm")
+  plt.title("RPM vs Time")
+  plt.grid(True)
   plt.show()
 
-def plot_rpm_vs_throttle(df):
+def rpm_vs_throttle(df):
   plt.plot(df["engine_rpm"], df["throttle_position"])
+  plt.xlabel("rpm")
+  plt.ylabel("throttle")
+  plt.title("Throttle vs RPM")
+  plt.grid(True)
   plt.show()
+
+def get_file_ext(filepath):
+  return splitext(filepath)[1].lower()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('filename')
+parser.add_argument('-v', '--view', action='store_true')
 parser.add_argument('-s', '--save')
 parser.add_argument('-d', '--drop_duplicates')
-parser.add_argument('-n', '--remove_nan')
-parser.add_argument('-f', '--filter_outliers')
+parser.add_argument('-n', '--remove_nan', action='store_true')
+parser.add_argument(
+    '-f', '--filter_outliers',
+    nargs=4,
+    metavar=('col', 'min', 'max', 'inclusive'),
+    help="Filter outliers in COL between MIN and MAX inclusive if INCLUSIVE is 1"
+)
+
 parser.add_argument('-i', '--interpolate_missing')
-parser.add_argument('-h', '--high_rpm')
-parser.add_argument('-r', '--rpm_vs_time')
-parser.add_argument('-t', '--rpm_vs_throttle')
+parser.add_argument('-H', '--high_rpm', action='store_true')
+parser.add_argument('-r', '--rpm_vs_time', action='store_true')
+parser.add_argument('-t', '--rpm_vs_throttle', action='store_true')
 
 args = parser.parse_args()
 
-if '.csv' in args.filename:
-  df = read_csv(args.filename)
-elif '.json' in args.filename:
-  df = read_json(args.filename)
+if not exists(args.filename):
+  raise ValueError(f"Error: File {args.filename} not found")
 
-if args.drop_duplicates in df.columns:
-  df = drop_duplicates(df, list(args.drop_duplicates))
+file_ext = get_file_ext(args.filename)
+
+if file_ext == ".csv":
+  df = read_csv(args.filename)
+elif file_ext == ".json":
+  df = read_json(args.filename)
+else:
+  raise ValueError(f"Error: invalid file extension -- '{file_ext}' not supported")
+
+if args.view:
+  print(df)
+
+if args.drop_duplicates:
+  cols = args.drop_duplicates.split(",")
+  for col in cols:
+    if col not in df.columns:
+      raise ValueError(f"Error: Column '{col}' does not exist")
+
+  df = drop_duplicates(df, cols)
 
 if args.remove_nan:
   df = remove_nan(df)
 
-if args.interpolate_missing in df.columns:
-  df = interpolate_missing(df, args.interpolate_missing)
+if args.filter_outliers:
+  col = args.filter_outliers[0]
+  min_range = float(args.filter_outliers[1])
+  max_range = float(args.filter_outliers[2])
+  inclusive = int(args.filter_outliers[3])
+  df = filter_outliers(df, col, min_range, max_range, inclusive)
+
+if args.interpolate_missing:
+  cols = args.interpolate_missing.split(",")
+  df = interpolate_missing(df, cols)
 
 if args.high_rpm:
   df = high_rpm(df)
@@ -96,7 +135,8 @@ if args.rpm_vs_throttle:
   rpm_vs_throttle(df)
 
 if args.save:
-  if '.csv' in args.save:
+  if args.save.endswith(".csv"):
     save_csv(df, args.save)
-  elif '.json' in args.save:
+  elif args.save.endswith(".json"):
     save_json(df, args.save)
+
